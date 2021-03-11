@@ -98,5 +98,17 @@ public class BitBuffer{
         index = 0;
     }
 
-
+    /**
+     * Empties the buffer and closes the file
+     */
+    public void close(){
+        writeBuff();
+        try{
+            outBuff.close();
+        }
+        catch(IOException e){
+            e.printStackTrace();
+        }
+    }
+    
 }
