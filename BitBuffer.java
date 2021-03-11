@@ -6,13 +6,13 @@ import java.io.BufferedOutputStream;
 import java.io.File;
 
 public class BitBuffer{
-    File file;
-    boolean bits[];
-    int index;
-    int buffSize;
-    boolean writable;
-    BufferedOutputStream outBuff;
-    BufferedInputStream inBuff; 
+    private File file;
+    private boolean bits[];
+    private int index;
+    private int buffSize;
+    private boolean writable;
+    private BufferedOutputStream outBuff;
+    private BufferedInputStream inBuff; 
 
     /**
      * Initializes a BitBuffer operating on a given
@@ -63,6 +63,49 @@ public class BitBuffer{
         else{
             System.out.println("Can not perform operation; mode is read.");
         }
+    }
+
+    /**
+     * Writes the important bits of a byte to the buffer
+     * @param byt the byte to be compressed and written
+     */
+    public void writeByte(byte byt){
+        int i = 0;
+        byte mask = (byte) ( 0x1 << (7 - i) );
+        
+        while( ((byt & mask) == 0) && (i < 8)){
+            //until a set bit is found
+            mask = (byte) ( 0x1 << (7 - i) );
+            i++;
+        }
+
+        while(i < 8){
+            //all remaining bits
+            if(index >= buffSize){
+                //need to reset buffer
+                writeBuff();
+            }
+
+            if((byt & mask) != 0){
+                //bit is set
+                bits[index] = true;
+            }
+            else{
+                bits[index] = false;
+            }
+            
+            index++;
+            mask = (byte) ( 0x1 << (8 - i - 1) );
+            i++;
+        }
+    }
+    
+    /**
+     * Writes the important bits of a character to the buffer
+     * @param c the character to be compressed
+     */
+    public void writeChar(char c){
+        writeByte((byte) c);
     }
 
     /**
@@ -143,6 +186,9 @@ public class BitBuffer{
         return bitVal;
     }
 
+    /**
+     * Fills the buffer with the next inputs from the file
+     */
     private void fillBuff(){
         index = 0;
         for(int i = 0; i < buffSize; i += 8){
