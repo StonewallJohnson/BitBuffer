@@ -35,9 +35,9 @@ public class BitBuffer{
             }
             else{
                 //mode is reading
-                //TODO: populate the buffer with first bytes
                 FileInputStream fis = new FileInputStream(file);
                 inBuff = new BufferedInputStream(fis);
+                fillBuff();
             }
         }
         catch(IOException q){
@@ -61,7 +61,7 @@ public class BitBuffer{
             index++;
         }
         else{
-            System.out.println("Can not perform operation, buffer is not in write mode.");
+            System.out.println("Can not perform operation; mode is read.");
         }
     }
 
@@ -69,15 +69,15 @@ public class BitBuffer{
      * Writes the contents of the buffer to the file
      * and cleans the buffer
      */
-    public void writeBuff(){
+    private void writeBuff(){
         for(int i = 0; i < index; i += 8){
             //for the minimum number of bytes to write from buffer
             Byte b = 0x0;
             for(int j = i; j < i + 8; j++){
                 //for every bit
                 b = (byte)(b << 1); 
-                if(!bits[j]){
-                    //flip bottom bit to 0
+                if(bits[j]){
+                    //flip bottom bit to 1
                     b =  (byte)(b ^ 0x1);
                 }
             }
@@ -91,7 +91,7 @@ public class BitBuffer{
             }
         }
 
-        for(int i = 0; i < buffSize; i++){
+        for(int i = 0; i < index; i++){
             //for every bit in the buffer
             bits[i] = false;
         }
@@ -102,13 +102,71 @@ public class BitBuffer{
      * Empties the buffer and closes the file
      */
     public void close(){
-        writeBuff();
-        try{
-            outBuff.close();
+        if(writable){
+            writeBuff();
+            try{
+                outBuff.close();
+            }
+            catch(IOException e){
+                e.printStackTrace();
+            }
         }
-        catch(IOException e){
-            e.printStackTrace();
+        else{
+            try{
+                inBuff.close();
+            }
+            catch(IOException e){
+                e.printStackTrace();
+            }
         }
     }
-    
+
+    /**
+     * 
+     * @return the next bit value from the buffer
+     */
+    public boolean readBit(){
+        boolean bitVal;
+        if(!writable){
+            //can read this buffer
+            if(index >= buffSize){
+                //get more to read
+                fillBuff();
+            }
+            bitVal = bits[index];
+            index++;
+        }
+        else{
+            bitVal = false;
+            System.out.println("Can not do this operation; mode is write.");
+        }
+        return bitVal;
+    }
+
+    private void fillBuff(){
+        index = 0;
+        for(int i = 0; i < buffSize; i += 8){
+            //for every byte in the buffer
+            Byte b;
+            try{
+                b = (byte) inBuff.read();
+                for(int j = i; j < i + 8; j++){
+                    //for every bit in the byte
+                    byte mask = (byte) ( 0x1 << (8 - (j % 8) - 1) );
+                    if((b & mask) != 0){
+                        //bit is set
+                        bits[j] = true;
+                    }
+                    else{
+                        bits[j] = false;
+                    }
+                }
+            } 
+            catch(IOException e){
+                //TODO: handle exception
+                e.printStackTrace();
+            }
+        }
+        index = 0;
+    }
 }
