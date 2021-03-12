@@ -76,14 +76,14 @@ public class BitBuffer{
             
             while( ((byt & mask) == 0) && (i < 8)){
                 //until a set bit is found
-                mask = (byte) ( 0x1 << (7 - i) );
                 i++;
+                mask = (byte) ( 0x1 << (7 - i) );
             }
     
             while(i < 8){
                 //all remaining bits
-                writeBit((byt & mask) != 0);
                 mask = (byte) ( 0x1 << (7 - i) );
+                writeBit((byt & mask) != 0);
                 i++;
             }
         }
@@ -99,12 +99,12 @@ public class BitBuffer{
     public void writeByte(byte byt){
         if(writable){
             int i = 0;
-            byte mask = (byte) ( 0x1 << (7 - i) );
+            byte mask;
             while(i < 8){
                 //for every bit
+                mask = (byte) ( 0x1 << (7 - i) );
                 writeBit((byt & mask) != 0);
 
-                mask = (byte) ( 0x1 << (7 - i) );
                 i++;
             }
         }
