@@ -69,43 +69,56 @@ public class BitBuffer{
      * Writes the important bits of a byte to the buffer
      * @param byt the byte to be compressed and written
      */
-    public void writeByte(byte byt){
-        int i = 0;
-        byte mask = (byte) ( 0x1 << (7 - i) );
-        
-        while( ((byt & mask) == 0) && (i < 8)){
-            //until a set bit is found
-            mask = (byte) ( 0x1 << (7 - i) );
-            i++;
-        }
-
-        while(i < 8){
-            //all remaining bits
-            if(index >= buffSize){
-                //need to reset buffer
-                writeBuff();
-            }
-
-            if((byt & mask) != 0){
-                //bit is set
-                bits[index] = true;
-            }
-            else{
-                bits[index] = false;
-            }
+    public void compressByte(byte byt){
+        if(writable){
+            int i = 0;
+            byte mask = (byte) ( 0x1 << (7 - i) );
             
-            index++;
-            mask = (byte) ( 0x1 << (8 - i - 1) );
-            i++;
+            while( ((byt & mask) == 0) && (i < 8)){
+                //until a set bit is found
+                mask = (byte) ( 0x1 << (7 - i) );
+                i++;
+            }
+    
+            while(i < 8){
+                //all remaining bits
+                writeBit((byt & mask) != 0);
+                mask = (byte) ( 0x1 << (7 - i) );
+                i++;
+            }
+        }
+        else{
+            System.out.println("Can not perform operation; mode is read.");
         }
     }
     
     /**
+     * Writes a whole byte to the bit buffer
+     * @param byt the byte to be written
+     */
+    public void writeByte(byte byt){
+        if(writable){
+            int i = 0;
+            byte mask = (byte) ( 0x1 << (7 - i) );
+            while(i < 8){
+                //for every bit
+                writeBit((byt & mask) != 0);
+
+                mask = (byte) ( 0x1 << (7 - i) );
+                i++;
+            }
+        }
+        else{
+            System.out.println("Can not perform operation; mode is read.");
+        }
+    }
+
+    /**
      * Writes the important bits of a character to the buffer
      * @param c the character to be compressed
      */
-    public void writeChar(char c){
-        writeByte((byte) c);
+    public void compressChar(char c){
+        compressByte((byte) c);
     }
 
     /**
@@ -187,6 +200,33 @@ public class BitBuffer{
     }
 
     /**
+     * Reads a whole byte from the bit buffer
+     * @return the byte taken from the buffer
+     */
+    public byte readByte(){
+        byte b = 0;
+        if(!writable){
+            //can read
+            int i = 0;
+            while(i < 8){
+                //for every bit in the byte
+                boolean bit = readBit();
+                b = (byte) (b << 1);
+                if(bit){
+                    //set a 1 in the bottom bit
+                    b = (byte) (b | 0x1);
+                }
+                i++;
+            }
+        }
+        else{
+            System.out.println("Can not perform operation; mode is write.");
+        }
+
+        return b;
+    }
+
+    /**
      * Fills the buffer with the next inputs from the file
      */
     private void fillBuff(){
@@ -209,7 +249,6 @@ public class BitBuffer{
                 }
             } 
             catch(IOException e){
-                //TODO: handle exception
                 e.printStackTrace();
             }
         }
