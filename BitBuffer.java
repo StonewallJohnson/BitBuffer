@@ -8,11 +8,8 @@ import java.io.File;
 public class BitBuffer{
     private File file;
     private boolean bits[];
-    private boolean moreBits[];
-    private final boolean eofBits[] = new boolean[]{false, false, false, false, false, false, true, true};
-    private boolean extraInUse;
     private int index;
-    private final int buffSize = 128;
+    private int buffSize;
     private boolean writable;
     private BufferedOutputStream outBuff;
     private BufferedInputStream inBuff; 
@@ -25,10 +22,10 @@ public class BitBuffer{
      */
     public BitBuffer(File f, boolean mode){
         file = f;
+        buffSize = 128; //16 bytes
         bits = new boolean[buffSize];
         index = 0;
         writable = mode;
-        extraInUse = false;
         
         try{
             if(writable){
@@ -40,7 +37,7 @@ public class BitBuffer{
                 //mode is reading
                 FileInputStream fis = new FileInputStream(file);
                 inBuff = new BufferedInputStream(fis);
-                fillBuff(bits);
+                fillBuff();
             }
         }
         catch(IOException q){
@@ -190,7 +187,7 @@ public class BitBuffer{
             //can read this buffer
             if(index >= buffSize){
                 //get more to read
-                fillBuff(bits);
+                fillBuff();
             }
             bitVal = bits[index];
             index++;
@@ -228,99 +225,33 @@ public class BitBuffer{
 
         return b;
     }
-    
+
     /**
      * Fills the buffer with the next inputs from the file
      */
-    private void fillBuff(boolean buf[]){
+    private void fillBuff(){
         index = 0;
-        if(buf == bits && extraInUse){
-            //we already have the bits to use
-            bits = moreBits;
-            extraInUse = false;
-        }
-        else{
-            for(int i = 0; i < buffSize; i += 8){
-                //for every byte in the buffer
-                Byte b;
-                try{
-                    b = (byte) inBuff.read();
-                    for(int j = i; j < i + 8; j++){
-                        //for every bit in the byte
-                        byte mask = (byte) ( 0x1 << (8 - (j % 8) - 1) );
-                        if((b & mask) != 0){
-                            //bit is set
-                            buf[j] = true;
-                        }
-                        else{
-                            buf[j] = false;
-                        }
+        for(int i = 0; i < buffSize; i += 8){
+            //for every byte in the buffer
+            Byte b;
+            try{
+                b = (byte) inBuff.read();
+                for(int j = i; j < i + 8; j++){
+                    //for every bit in the byte
+                    byte mask = (byte) ( 0x1 << (8 - (j % 8) - 1) );
+                    if((b & mask) != 0){
+                        //bit is set
+                        bits[j] = true;
                     }
-                } 
-                catch(IOException e){
-                    e.printStackTrace();
+                    else{
+                        bits[j] = false;
+                    }
                 }
+            } 
+            catch(IOException e){
+                e.printStackTrace();
             }
         }
-
         index = 0;
-    }
-
-    /**
-     * 
-     * @return true if the next two bytes of the buffer are
-     * 0, false if not
-     */
-    public boolean hasEOF(){
-        boolean oldMode = writable;
-        writable = false;
-        int oldIndex = index;
-        boolean EOF;
-        
-        if(index + 8 >= buffSize){
-            //we have a buffer problem
-            //grab the next buffSize bits because that is
-            //how fillBuff works
-            boolean specialBits[] = new boolean[8];
-            int i = 0;
-            while(index < buffSize){
-                //check for end of file
-                specialBits[i] = readBit();
-                i++;
-            }
-            fillBuff(moreBits);
-            extraInUse = true;
-            int j = 0;
-            while(i < 8){
-                //there are more bits to scan from the new bits
-                specialBits[i] = moreBits[j];
-                j++;
-            }
-
-            for(int q = 0; i < 8; i++){
-                //every bit in specialBits
-                if(specialBits[q] != eofBits[q]){
-                    writable = oldMode;
-                    index = oldIndex;    
-                    return false;
-                }
-            }
-            
-            EOF = true;
-        }
-        else{
-            //no buffer problem
-            if(readByte() == 3){
-                //ETX character found
-                EOF = true;
-            }
-            else{
-                EOF = false;
-            }
-        }
-
-        writable = oldMode;
-        index = oldIndex;
-        return EOF;
     }
 }
